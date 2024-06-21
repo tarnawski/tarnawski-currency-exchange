@@ -12,8 +12,15 @@ use ValueError;
  */
 final readonly class Money
 {
-    private function __construct(private int $amount, private Currency $currency)
+    public const int SCALE = 4;
+
+    private string $amount;
+    private Currency $currency;
+
+    private function __construct(string $amount, Currency $currency)
     {
+        $this->amount = $amount;
+        $this->currency = $currency;
     }
 
     /**
@@ -21,7 +28,7 @@ final readonly class Money
      */
     public static function create(int $amount, Currency $currency): self
     {
-        return new self($amount, $currency);
+        return new self((string) $amount, $currency);
     }
 
     /**
@@ -34,8 +41,15 @@ final readonly class Money
      */
     public static function __callStatic(string $method, array $arguments): self
     {
+        if (!isset($arguments[0])) {
+            throw new MoneyException('Amount should be provided.');
+        }
+        if (!is_int($arguments[0])) {
+            throw new MoneyException('Amount should be expressed as integer value.');
+        }
+
         try {
-            return new self($arguments[0], Currency::from($method));
+            return new self((string) $arguments[0], Currency::from($method));
         } catch (ValueError) {
             throw new MoneyException('Cannot create money with specified currency.');
         }
@@ -47,7 +61,7 @@ final readonly class Money
             throw new MoneyException('Cannot add money with different currencies.');
         }
 
-        return new self($this->amount + $money->amount, $this->currency);
+        return new self(bcadd($this->amount, $money->amount, self::SCALE), $this->currency);
     }
 
     public function subtract(Money $money): self
@@ -56,17 +70,21 @@ final readonly class Money
             throw new MoneyException('Cannot subtract money with different currencies.');
         }
 
-        return new self($this->amount - $money->amount, $this->currency);
+        return new self(bcsub($this->amount, $money->amount, self::SCALE), $this->currency);
     }
 
     public function multiply(float $multiplier): self
     {
-        return new self(intval(round($this->amount * $multiplier)), $this->currency);
+        $multiplier =  number_format($multiplier, self::SCALE, '.', '');
+        $amount = bcmul($this->amount, $multiplier, self::SCALE);
+        $roundedAmount = bcadd($amount, '0.5', 0); //TODO Make sure that this is bast way for rounding.
+
+        return new self($roundedAmount, $this->currency);
     }
 
     public function getAmount(): int
     {
-        return $this->amount;
+        return (int) $this->amount;
     }
 
     public function getCurrency(): Currency

@@ -6,6 +6,7 @@ namespace App\Tests\Domain;
 
 use App\Domain\Currency;
 use App\Domain\Money;
+use App\Domain\MoneyException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -17,6 +18,30 @@ class MoneyTest extends TestCase
 
         $this->assertEquals(125, $result->getAmount());
         $this->assertEquals(Currency::EUR, $result->getCurrency());
+    }
+
+    public function testFactoryMethodWhenNoValueProvided(): void
+    {
+        $this->expectException(MoneyException::class);
+        $this->expectExceptionMessage('Amount should be provided.');
+
+        Money::EUR();
+    }
+
+    public function testFactoryMethodWhenNoIntegerValueProvided(): void
+    {
+        $this->expectException(MoneyException::class);
+        $this->expectExceptionMessage('Amount should be expressed as integer value.');
+
+        Money::EUR('unknown');
+    }
+
+    public function testFactoryMethodWhenNoUnknownCurrencyProvided(): void
+    {
+        $this->expectException(MoneyException::class);
+        $this->expectExceptionMessage('Cannot create money with specified currency.');
+
+        Money::UNKNOWN(100);
     }
 
     public function testMoneyAdd(): void
